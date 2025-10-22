@@ -32,24 +32,24 @@ class CheckProcessorLLM:
         """
         
         prompt = f"""
-You are a financial data extraction expert. I will give you raw OCR text from a check image, and you need to extract specific information in a structured JSON format.
+        You are a financial data extraction expert. I will give you raw OCR text from a check image, and you need to extract specific information in a structured JSON format.
 
-The OCR text may contain noise, formatting issues, or irrelevant information. Your job is to identify and extract only the relevant check information.
+        The OCR text may contain noise, formatting issues, or irrelevant information. Your job is to identify and extract only the relevant check information.
 
-Please extract the following information from this check OCR text:
+        Please extract the following information from this check OCR text:
 
-1. **payee_name**: The name of the person or entity that the check is payable to (usually after "Pay to the order of" or similar)
-2. **date**: The date written on the check (in MM/DD/YYYY format if possible)
-3. **amount**: The numerical amount in dollars (both written and numerical if available, prefer numerical)
-4. **memo**: Any memo or reason for payment (optional field, may be empty)
+        1. **payee_name**: The name of the person or entity that the check is payable to (usually after "Pay to the order of" or similar)
+        2. **date**: The date written on the check (in MM/DD/YYYY format if possible)
+        3. **amount**: The numerical amount in dollars (both written and numerical if available, prefer numerical)
+        4. **memo**: Any memo or reason for payment (optional field, may be empty)
 
-Return ONLY a valid JSON object with these exact field names. If any information is not found or unclear, use null for that field.
+        Return ONLY a valid JSON object with these exact field names. If any information is not found or unclear, use null for that field.
 
-OCR Text to process:
-{ocr_text}
+        OCR Text to process:
+        {ocr_text}
 
-Return only the JSON object, no additional text or explanation:
-"""
+        Return only the JSON object, no additional text or explanation:
+        """
 
         try:
             response = self.client.chat.completions.create(

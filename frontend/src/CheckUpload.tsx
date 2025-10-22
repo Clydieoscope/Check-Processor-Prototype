@@ -1,8 +1,8 @@
-import './App.css'
+import './CheckUpload.css'
 import Webcam from 'react-webcam'
 import {useCallback, useRef, useState} from 'react'
 
-function App() {
+function CheckUpload() {
   const webRef = useRef<Webcam>(null)
   const [front, setFrontImg] = useState('')
   const [back, setBackImg] = useState('')
@@ -158,4 +158,4 @@ function App() {
   )
 }
 
-export default App
+export default CheckUpload
