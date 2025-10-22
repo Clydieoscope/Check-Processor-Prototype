@@ -1,8 +1,10 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  max-width: 100vw;
+  margin: 0;
+  padding: 1rem;
   text-align: center;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .logo {
@@ -41,61 +43,212 @@
   color: #888;
 }
 
-#capture-btn {
-  display: block;
-  /* margin: 2rem auto; */
+/* Main container */
+.main-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
 }
 
-.flex {
-  /* margin: 2rem; */
+.main-container h1 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+}
+
+/* Content row - three panels side by side */
+.content-row {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  height: calc(100vh - 4rem);
+}
+
+/* Left panel - Image previews */
+.preview-panel {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.preview-panel h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+.image-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.image-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.image-item h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.img-container {
+  height: 120px;
+  width: 100%;
+  background-color: #313131;
+  border-radius: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  button, label:not(:last-child) {
-    margin-right: 2rem;
-  }
 }
 
-.preview-pane {
+.check-img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 0.5rem;
+}
+
+/* Middle panel - Webcam and controls */
+.camera-panel {
+  flex: 0 0 700px; /* Huge width */
   display: flex;
-  flex-wrap: wrap;
   flex-direction: column;
-  justify-content: center;
-  padding: 2rem;
-
-  h2 {
-    margin: 4.75rem 0 0 0;
-  }
-
-  h3 {
-    margin: 0.5rem 0;
-  }
-
-  div {
-    margin: 1rem;
-  }
-
-  .check-img {
-    height: 175px;
-  }
-
-  .img-container{
-    height: 175px;
-    width: 233px;
-    background-color: #313131;
-    border-radius: 1rem;
-  }
-
-  button {
-    margin-top: 1rem;
-  }
+  gap: 1rem;
 }
 
-.webcam-container video, .check-img{
-  border-radius: 1rem;
+.webcam-container {
+  width: 100%;
+  height: 420px; /* Very big height */
 }
 
-.row {
+.webcam-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+.controls {
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+#capture-btn {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 0.25rem;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+}
+
+#capture-btn:hover {
+  background-color: #0056b3;
+}
+
+.radio-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+/* Right panel - OCR output */
+.ocr-panel {
+  flex: 2; /* Much wider OCR text box */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ocr-panel h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 0.9rem;
+  margin: 0;
+  padding: 0.5rem;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 0.25rem;
+}
+
+.text-output {
+  flex: 1;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  overflow-y: auto;
+  text-align: left;
+  width: 100%; /* Ensure it takes full width */
+}
+
+.text-output pre {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  width: 100%; /* Make text fill the full width */
+  max-width: none; /* Remove any max-width constraints */
+}
+
+.ocr-panel button {
+  margin-top: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 0.25rem;
+  background-color: #28a745;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.ocr-panel button:hover {
+  background-color: #1e7e34;
+}
+
+/* Structured data styling */
+.structured-data {
+  background-color: #e8f5e8;
+  border: 1px solid #28a745;
+  border-radius: 0.25rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.structured-data h3 {
+  margin: 0 0 0.5rem 0;
+  color: #155724;
+  font-size: 1rem;
+}
+
+.data-item {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.data-item strong {
+  color: #155724;
+  margin-right: 0.5rem;
 }
