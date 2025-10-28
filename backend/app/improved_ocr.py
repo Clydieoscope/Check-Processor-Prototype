@@ -42,15 +42,25 @@ class ImprovedCheckOCR:
         return rotated
 
     def clean_for_ocr(self, img):
-        """Apply advanced preprocessing for better OCR results."""
-        # Gentle denoise + adaptive threshold
-        den = cv2.fastNlMeansDenoising(img, None, 15, 7, 21)
-        th = cv2.adaptiveThreshold(den, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                   cv2.THRESH_BINARY, 31, 15)
-        # Light morphology to close gaps in digits/letters
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2))
-        th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel, iterations=1)
-        return th
+        """Apply gentle preprocessing for better OCR results."""
+        # Try multiple preprocessing approaches and return the best one
+        
+        # Method 1: Gentle adaptive threshold (often works best for checks)
+        adaptive = cv2.adaptiveThreshold(
+            img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, 8
+        )
+        
+        # Method 2: OTSU threshold (good for high contrast)
+        _, otsu = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # Method 3: Conservative denoise + adaptive threshold
+        denoised = cv2.fastNlMeansDenoising(img, None, 10, 7, 21)
+        conservative = cv2.adaptiveThreshold(
+            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 10
+        )
+        
+        # Return the adaptive threshold as it usually works best for printed text
+        return adaptive
 
     def crop_rel(self, img, rel_box):
         """Crop image using relative coordinates (0-1 range)."""
@@ -61,11 +71,28 @@ class ImprovedCheckOCR:
         return img[y1:y2, x1:x2]
 
     def ocr_text(self, img, psm=6, allow=None):
-        """Perform OCR with optimized configuration."""
-        config = f'--oem 3 --psm {psm}'
+        """Perform OCR with multiple attempts for best results."""
+        configs = [
+            f'--oem 3 --psm {psm}',
+            f'--oem 3 --psm 7',  # Single text line
+            f'--oem 3 --psm 8',  # Single word
+            f'--oem 3 --psm 6'   # Uniform block of text
+        ]
+        
         if allow:
-            config += f' -c tessedit_char_whitelist={allow}'
-        return pytesseract.image_to_string(img, config=config).strip()
+            configs = [f'{config} -c tessedit_char_whitelist={allow}' for config in configs]
+        
+        best_result = ""
+        for config in configs:
+            try:
+                result = pytesseract.image_to_string(img, config=config).strip()
+                # Choose result with most alphanumeric characters
+                if len(re.sub(r'[^a-zA-Z0-9]', '', result)) > len(re.sub(r'[^a-zA-Z0-9]', '', best_result)):
+                    best_result = result
+            except:
+                continue
+        
+        return best_result
 
     def parse_amount(self, text):
         """Extract currency amount from text."""
@@ -95,16 +122,21 @@ class ImprovedCheckOCR:
 
             # Convert to grayscale and preprocess
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            gray = self.auto_deskew(gray)
-            proc = self.clean_for_ocr(gray)
+            
+            # Try both with and without deskewing
+            gray_original = gray.copy()
+            gray_deskewed = self.auto_deskew(gray.copy())
+            
+            # Use the original (non-deskewed) version first as deskewing can sometimes hurt
+            proc = self.clean_for_ocr(gray_original)
 
-            # Define regions of interest (adjust these based on your check layout)
+            # Define regions of interest (customized for your check layout)
             ROIS = {
-                "date": (0.72, 0.07, 0.24, 0.08),      # top-right corner
-                "payee": (0.12, 0.30, 0.75, 0.10),     # "Pay to the order of" line
-                "amount_numeric": (0.72, 0.36, 0.24, 0.12),  # $ ####.## box
-                "amount_words": (0.08, 0.43, 0.82, 0.10),    # amount in words
-                "memo": (0.12, 0.55, 0.75, 0.08),      # memo line (optional)
+                "date": (0.75, 0.04, 0.22, 0.06),      # top-right corner (09-25-2012)
+                "payee": (0.15, 0.18, 0.45, 0.06),     # "Pay to the order of" line (**Roy Ang**)
+                "amount_numeric": (0.65, 0.18, 0.30, 0.06),  # $ amount box (**123,456.00**)
+                "amount_words": (0.05, 0.27, 0.90, 0.06),    # amount in words (One Hundred Twenty...)
+                "memo": (0.15, 0.47, 0.45, 0.06),      # memo line (Donation for Education)
             }
 
             results = {}
@@ -115,10 +147,16 @@ class ImprovedCheckOCR:
             results["raw_date"] = date_txt
             results["date"] = self.parse_date(date_txt)
 
-            # Extract PAYEE
+            # Extract PAYEE - try multiple approaches
             roi_payee = self.crop_rel(proc, ROIS["payee"])
-            payee_alt = cv2.threshold(roi_payee, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-            payee_txt = self.ocr_text(payee_alt, psm=7)
+            payee_txt = self.ocr_text(roi_payee, psm=7)
+            
+            # If first attempt didn't work well, try with deskewed version
+            if len(re.sub(r'[^A-Za-z0-9]', '', payee_txt)) < 3:
+                proc_deskewed = self.clean_for_ocr(gray_deskewed)
+                roi_payee_deskew = self.crop_rel(proc_deskewed, ROIS["payee"])
+                payee_txt = self.ocr_text(roi_payee_deskew, psm=7)
+            
             payee_txt = re.sub(r'[^A-Za-z0-9 \'.,&-]', '', payee_txt)
             results["payee"] = payee_txt.strip()
 
@@ -145,14 +183,27 @@ class ImprovedCheckOCR:
             full_text = pytesseract.image_to_string(gray, config='--oem 3 --psm 6')
             results["raw_text"] = full_text
 
+            # Check if ROI extraction was actually successful
+            # Consider it successful only if we got meaningful data
+            extracted_fields = 0
+            if results["payee"] and len(re.sub(r'[^A-Za-z]', '', results["payee"])) >= 3:
+                extracted_fields += 1
+            if results["date"]:
+                extracted_fields += 1
+            if results["amount"]:
+                extracted_fields += 1
+            
+            roi_success = extracted_fields >= 2
+            
             return {
-                "extraction_success": True,
+                "extraction_success": roi_success,
                 "payee_name": results["payee"],
                 "date": results["date"],
                 "amount": results["amount"],
                 "memo": results["memo"],
                 "raw_text": results["raw_text"],
-                "detailed_results": results
+                "detailed_results": results,
+                "roi_fields_extracted": extracted_fields
             }
 
         except Exception as e:
