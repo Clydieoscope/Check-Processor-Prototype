@@ -132,11 +132,14 @@ class ImprovedCheckOCR:
 
             # Define regions of interest (customized for your check layout)
             ROIS = {
-                "date": (0.75, 0.04, 0.22, 0.06),      # top-right corner (09-25-2012)
-                "payee": (0.15, 0.18, 0.45, 0.06),     # "Pay to the order of" line (**Roy Ang**)
-                "amount_numeric": (0.65, 0.18, 0.30, 0.06),  # $ amount box (**123,456.00**)
-                "amount_words": (0.05, 0.27, 0.90, 0.06),    # amount in words (One Hundred Twenty...)
-                "memo": (0.15, 0.47, 0.45, 0.06),      # memo line (Donation for Education)
+                "date": (0.76, 0.35, 0.20, 0.08),      # top-right corner (11/05/2025) - taller
+                "payee": (0.05, 0.24, 0.65, 0.08),     # "Pay to the order of" line (Boxer's Mayfair Village) - taller
+                "amount_numeric": (0.76, 0.43, 0.20, 0.08),  # $ amount box (100.00) - taller
+                "amount_words": (0.05, 0.52, 0.80, 0.10),    # amount in words (one hundred only) - taller
+                "memo": (0.12, 0.64, 0.50, 0.09),      # memo line (Rent payment) - taller
+                "routing_number": (0.07, 0.73, 0.15, 0.10),  # bottom left (123456) - taller
+                "account_number": (0.22, 0.73, 0.18, 0.10),  # bottom middle (123456789) - taller
+                "check_number": (0.40, 0.73, 0.10, 0.10),    # bottom right (123) - taller
             }
 
             results = {}
@@ -179,6 +182,26 @@ class ImprovedCheckOCR:
             memo_txt = re.sub(r'[^A-Za-z0-9 \'.,&-]', '', memo_txt)
             results["memo"] = memo_txt.strip()
 
+            # Extract ROUTING NUMBER (bottom MICR line)
+            roi_routing = self.crop_rel(proc, ROIS["routing_number"])
+            routing_txt = self.ocr_text(roi_routing, psm=7, allow="0123456789:")
+            # Clean MICR symbols (: colons) and extract just the digits
+            routing_clean = re.sub(r'[^0-9]', '', routing_txt)
+            results["routing_number"] = routing_clean.strip()
+
+            # Extract ACCOUNT NUMBER (bottom MICR line)
+            roi_account = self.crop_rel(proc, ROIS["account_number"])
+            account_txt = self.ocr_text(roi_account, psm=7, allow="0123456789:")
+            # Clean MICR symbols and extract just the digits
+            account_clean = re.sub(r'[^0-9]', '', account_txt)
+            results["account_number"] = account_clean.strip()
+
+            # Extract CHECK NUMBER (bottom MICR line)
+            roi_check_num = self.crop_rel(proc, ROIS["check_number"])
+            check_num_txt = self.ocr_text(roi_check_num, psm=7, allow="0123456789")
+            check_num_clean = re.sub(r'[^0-9]', '', check_num_txt)
+            results["check_number"] = check_num_clean.strip()
+
             # Also get full image OCR for fallback
             full_text = pytesseract.image_to_string(gray, config='--oem 3 --psm 6')
             results["raw_text"] = full_text
@@ -201,6 +224,9 @@ class ImprovedCheckOCR:
                 "date": results["date"],
                 "amount": results["amount"],
                 "memo": results["memo"],
+                "routing_number": results["routing_number"],
+                "account_number": results["account_number"],
+                "check_number": results["check_number"],
                 "raw_text": results["raw_text"],
                 "detailed_results": results,
                 "roi_fields_extracted": extracted_fields
@@ -219,6 +245,9 @@ class ImprovedCheckOCR:
                     "date": None,
                     "amount": None,
                     "memo": "",
+                    "routing_number": "",
+                    "account_number": "",
+                    "check_number": "",
                     "raw_text": fallback_text,
                     "error": f"Advanced OCR failed, using fallback: {str(e)}"
                 }
@@ -229,6 +258,9 @@ class ImprovedCheckOCR:
                     "date": None,
                     "amount": None,
                     "memo": "",
+                    "routing_number": "",
+                    "account_number": "",
+                    "check_number": "",
                     "raw_text": "",
                     "error": f"OCR completely failed: {str(fallback_error)}"
                 }

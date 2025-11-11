@@ -50,6 +50,43 @@ def decode_data_url(data_url: str) -> Image.Image:
     img = ImageOps.grayscale(img)
     return img
 
+@app.post("/visualize_rois")
+def visualize_rois(payload: OCRPayload):
+    """Visualize ROI regions on the check image for debugging."""
+    try:
+        from roi_config import ROIConfigurator
+        import cv2
+        import numpy as np
+        
+        configurator = ROIConfigurator()
+        
+        # Decode the image
+        img = decode_data_url(payload.imageDataUrl)
+        img_array = np.array(img)
+        if len(img_array.shape) == 2:  # Grayscale
+            img_array = cv2.cvtColor(img_array, cv2.COLOR_GRAY2BGR)
+        else:
+            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+        
+        # Get ROI visualization
+        overlay = configurator.visualize_rois(payload.imageDataUrl, roi_config="user_check")
+        
+        # Convert back to base64
+        _, buffer = cv2.imencode('.jpg', overlay)
+        b64_string = base64.b64encode(buffer).decode('utf-8')
+        viz_data_url = f"data:image/jpeg;base64,{b64_string}"
+        
+        return {
+            "success": True,
+            "visualization": viz_data_url,
+            "rois": configurator.get_roi_config("user_check")
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 @app.post("/ocr")
 def ocr(payload: OCRPayload):
     logger.info("🔍 Starting smart OCR processing with fallback system...")
@@ -87,6 +124,9 @@ def ocr(payload: OCRPayload):
                                 "date": llm_results.get("date"),
                                 "amount": llm_results.get("amount"),
                                 "memo": llm_results.get("memo", ""),
+                                "routing_number": improved_results.get("routing_number", ""),
+                                "account_number": improved_results.get("account_number", ""),
+                                "check_number": improved_results.get("check_number", ""),
                                 "raw_text": improved_results["raw_text"],
                                 "extraction_success": True,
                                 "method": "improved_ocr + llm"
@@ -133,6 +173,9 @@ def ocr(payload: OCRPayload):
                                 "date": improved_results["date"],
                                 "amount": improved_results["amount"],
                                 "memo": improved_results["memo"],
+                                "routing_number": improved_results.get("routing_number", ""),
+                                "account_number": improved_results.get("account_number", ""),
+                                "check_number": improved_results.get("check_number", ""),
                                 "raw_text": improved_results["raw_text"],
                                 "extraction_success": True,
                                 "method": "improved_ocr_only"
@@ -183,6 +226,9 @@ def ocr(payload: OCRPayload):
                             "date": improved_results["date"],
                             "amount": improved_results["amount"],
                             "memo": improved_results["memo"],
+                            "routing_number": improved_results.get("routing_number", ""),
+                            "account_number": improved_results.get("account_number", ""),
+                            "check_number": improved_results.get("check_number", ""),
                             "raw_text": improved_results["raw_text"],
                             "extraction_success": True,
                             "method": "improved_ocr_only"
@@ -205,6 +251,9 @@ def ocr(payload: OCRPayload):
                         "date": improved_results["date"],
                         "amount": improved_results["amount"],
                         "memo": improved_results["memo"],
+                        "routing_number": improved_results.get("routing_number", ""),
+                        "account_number": improved_results.get("account_number", ""),
+                        "check_number": improved_results.get("check_number", ""),
                         "raw_text": improved_results["raw_text"],
                         "extraction_success": True,
                         "method": "improved_ocr_only"
@@ -280,6 +329,9 @@ def ocr(payload: OCRPayload):
                     "date": None,
                     "amount": None,
                     "memo": "",
+                    "routing_number": "",
+                    "account_number": "",
+                    "check_number": "",
                     "raw_text": ocr_text,
                     "extraction_success": False,
                     "method": "raw_ocr_only"

@@ -49,6 +49,27 @@ class RegexCheckExtractor:
                 r'(?:Payment\s+for)\s*:?\s*([A-Za-z0-9\s\'.,&\-]+?)(?:\s*-|\n|$)',
                 # At end of text
                 r'([A-Z][a-z]+(?:\s+[a-z]+)*\s+[A-Z][a-z]+)\s*-?\s*$',
+            ],
+            
+            # Routing number patterns (MICR line, typically 9 digits with special chars)
+            'routing_number': [
+                r':[\s]*(\d{6,9})[\s]*:',  # :123456: or :123456789:
+                r'[:\|][\s]*(\d{6,9})',    # Starting with MICR symbols
+                r'^[\s]*(\d{6,9})[\s]*[:\|]',  # Ending with MICR symbols
+            ],
+            
+            # Account number patterns (MICR line, variable length)
+            'account_number': [
+                r':[\s]*(\d{6,15})[\s]*',  # :123456789 or with trailing space
+                r'[:\|][\s]*(\d{6,15})[:\|]',  # Between MICR symbols
+                r'(\d{6,15})',  # Just digits (6-15 digits typical for account numbers)
+            ],
+            
+            # Check number patterns (typically 3-6 digits)
+            'check_number': [
+                r'[:\|][\s]*(\d{3,6})[\s]*$',  # At end after MICR symbol
+                r'^[\s]*(\d{3,6})[\s]*$',  # Standalone at end of line
+                r'[\s]+(\d{3,6})[\s]*$',  # With space before, at end
             ]
         }
     
@@ -67,6 +88,9 @@ class RegexCheckExtractor:
             "date": None,
             "amount": None,
             "memo": "",
+            "routing_number": "",
+            "account_number": "",
+            "check_number": "",
             "raw_text": ocr_text,
             "extraction_success": False,
             "method": "regex_extraction"
@@ -81,6 +105,9 @@ class RegexCheckExtractor:
             results["date"] = self._extract_date(cleaned_text)
             results["amount"] = self._extract_amount(cleaned_text)
             results["memo"] = self._extract_memo(cleaned_text)
+            results["routing_number"] = self._extract_routing_number(cleaned_text)
+            results["account_number"] = self._extract_account_number(cleaned_text)
+            results["check_number"] = self._extract_check_number(cleaned_text)
             
             # Consider extraction successful if we got at least 2 fields
             extracted_fields = sum(1 for v in [results["payee_name"], results["date"], results["amount"]] if v)
@@ -233,6 +260,45 @@ class RegexCheckExtractor:
                 memo = re.sub(r'[^\w\s\'.,&\-]', '', memo)
                 if len(memo) > 2:
                     return memo
+        return ""
+    
+    def _extract_routing_number(self, text: str) -> str:
+        """Extract routing number from MICR line using regex patterns."""
+        for pattern in self.patterns['routing_number']:
+            match = re.search(pattern, text)
+            if match:
+                routing = match.group(1).strip()
+                # Clean to just digits
+                routing = re.sub(r'[^\d]', '', routing)
+                # Routing numbers are typically 6-9 digits
+                if 6 <= len(routing) <= 9:
+                    return routing
+        return ""
+    
+    def _extract_account_number(self, text: str) -> str:
+        """Extract account number from MICR line using regex patterns."""
+        for pattern in self.patterns['account_number']:
+            match = re.search(pattern, text)
+            if match:
+                account = match.group(1).strip()
+                # Clean to just digits
+                account = re.sub(r'[^\d]', '', account)
+                # Account numbers are typically 6-15 digits
+                if 6 <= len(account) <= 15:
+                    return account
+        return ""
+    
+    def _extract_check_number(self, text: str) -> str:
+        """Extract check number from MICR line using regex patterns."""
+        for pattern in self.patterns['check_number']:
+            match = re.search(pattern, text)
+            if match:
+                check_num = match.group(1).strip()
+                # Clean to just digits
+                check_num = re.sub(r'[^\d]', '', check_num)
+                # Check numbers are typically 3-6 digits
+                if 3 <= len(check_num) <= 6:
+                    return check_num
         return ""
 
 # Example usage and testing

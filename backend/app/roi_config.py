@@ -11,11 +11,14 @@ class ROIConfigurator:
         # Default ROI configurations for different check types
         self.roi_presets = {
             "user_check": {
-                "date": (0.75, 0.04, 0.22, 0.06),      # top-right corner (09-25-2012)
-                "payee": (0.15, 0.18, 0.45, 0.06),     # "Pay to the order of" line (**Roy Ang**)
-                "amount_numeric": (0.65, 0.18, 0.30, 0.06),  # $ amount box (**123,456.00**)
-                "amount_words": (0.05, 0.27, 0.90, 0.06),    # amount in words (One Hundred Twenty...)
-                "memo": (0.15, 0.47, 0.45, 0.06),      # memo line (Donation for Education)
+                "date": (0.76, 0.35, 0.20, 0.08),      # top-right corner (11/05/2025) - taller
+                "payee": (0.05, 0.24, 0.65, 0.08),     # "Pay to the order of" line (Boxer's Mayfair Village) - taller
+                "amount_numeric": (0.76, 0.43, 0.20, 0.08),  # $ amount box (100.00) - taller
+                "amount_words": (0.05, 0.52, 0.80, 0.10),    # amount in words (one hundred only) - taller
+                "memo": (0.12, 0.64, 0.50, 0.09),      # memo line (Rent payment) - taller
+                "routing_number": (0.07, 0.73, 0.15, 0.10),  # bottom left (123456) - taller
+                "account_number": (0.22, 0.73, 0.18, 0.10),  # bottom middle (123456789) - taller
+                "check_number": (0.40, 0.73, 0.10, 0.10),    # bottom right (123) - taller
             },
             "standard": {
                 "date": (0.72, 0.07, 0.24, 0.08),
@@ -71,6 +74,9 @@ class ROIConfigurator:
             "amount_numeric": (0, 0, 255),  # Red
             "amount_words": (255, 255, 0),  # Cyan
             "memo": (255, 0, 255),      # Magenta
+            "routing_number": (0, 255, 255),  # Yellow
+            "account_number": (255, 128, 0),  # Orange
+            "check_number": (128, 0, 128),    # Purple
         }
         
         overlay = img.copy()
